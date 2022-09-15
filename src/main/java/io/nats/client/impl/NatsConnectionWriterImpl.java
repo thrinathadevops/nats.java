@@ -86,7 +86,7 @@ class NatsConnectionWriterImpl implements Runnable, NatsConnectionWriter {
                 throw new RuntimeException(e);
             }
             if (!dataPort.supportsPush()) {
-                this.stopped = connection.getExecutor().submit(this, Boolean.TRUE);
+                this.stopped = connection.getExecutor().submit(this);
             }
         } finally {
             this.startStopLock.unlock();

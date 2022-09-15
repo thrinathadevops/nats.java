@@ -11,7 +11,6 @@ import io.vertx.core.net.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -35,13 +34,20 @@ public class VertxDataPort implements DataPort {
 
 
     public VertxDataPort() {
-        vertx = Vertx.vertx();
-        ownVertx = false;
+        if (vertxThreadLocal.get()!=null) {
+            vertx = vertxThreadLocal.get();
+            ownVertx = false;
+        } else {
+            vertx = Vertx.vertx();
+            ownVertx = true;
+        }
     }
 
-    public VertxDataPort(final Vertx vertx) {
-        this.ownVertx = true;
-        this.vertx = vertx;
+
+    final static ThreadLocal<Vertx> vertxThreadLocal = new ThreadLocal<>();
+
+    public static void setVertx(final Vertx vertx) {
+        vertxThreadLocal.set(vertx);
     }
 
     @Override
@@ -65,6 +71,7 @@ public class VertxDataPort implements DataPort {
         );
         vertx.setTimer(100, event -> doWrite());
         vertx.setTimer(100, event -> handleDispatchers());
+
     }
 
     private void connect(AsyncResult<NetSocket> event) {

@@ -2,8 +2,9 @@ package io.nats.client.proto;
 
 import io.nats.client.*;
 import io.nats.client.impl.VertxDataPort;
+import io.nats.client.impl.VertxDispatchExecutorImpl;
+import io.vertx.core.Vertx;
 
-import javax.net.ssl.SSLContext;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
@@ -16,6 +17,12 @@ public class ProtoTLS {
 
             final Options.Builder builder = new Options.Builder();
             builder.server(DEFAULT_URL);
+
+            final Vertx vertx = Vertx.vertx();
+            VertxDataPort.setVertx(vertx);
+            builder.executor(new VertxDispatchExecutorImpl(vertx));
+            builder.callbackExecutor(new VertxDispatchExecutorImpl(vertx));
+            builder.connectionExecutor(new VertxDispatchExecutorImpl(vertx));
             builder.dataPortType(VertxDataPort.class.getCanonicalName());
             builder.connectionTimeout(Duration.ofSeconds(30));
             builder.tlsAlgorithm("SunX509");

@@ -63,7 +63,7 @@ class NatsDispatcher extends NatsConsumer implements Dispatcher, Runnable {
     void start(String id) {
         this.id = id;
         if (!supportsPush) {
-            thread = connection.getExecutor().submit(this, Boolean.TRUE);
+            thread = connection.getExecutor().submit(this);
         }
         this.running.set(true);
     }

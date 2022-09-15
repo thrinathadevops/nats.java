@@ -13,10 +13,7 @@
 
 package io.nats.client;
 
-import io.nats.client.impl.DataPort;
-import io.nats.client.impl.ErrorListenerLoggerImpl;
-import io.nats.client.impl.SocketDataPort;
-import io.nats.client.impl.TlsUtils;
+import io.nats.client.impl.*;
 import io.nats.client.support.SSLUtils;
 
 import javax.net.ssl.KeyManager;
@@ -560,8 +557,20 @@ public class Options {
     private final boolean trackAdvancedStats;
     private final boolean traceConnection;
 
-    private final ExecutorService executor;
+    private final DispatchExecutor executor;
     private final ServerListProvider serverListProvider;
+
+
+    private final DispatchExecutor callbackExecutor;
+    private final DispatchExecutor connectionExecutor;
+
+    public DispatchExecutor getCallbackExecutor() {
+        return callbackExecutor;
+    }
+
+    public DispatchExecutor getConnectionExecutor() {
+        return connectionExecutor;
+    }
 
     static class DefaultThreadFactory implements ThreadFactory {
         String name;
@@ -650,8 +659,35 @@ public class Options {
         private ErrorListener errorListener = null;
         private ConnectionListener connectionListener = null;
         private String dataPortType = DEFAULT_DATA_PORT_TYPE;
-        private ExecutorService executor;
+        private DispatchExecutor executor;
         private SSLContext sslContext;
+        private DispatchExecutor callbackExecutor;
+        private DispatchExecutor connectionExecutor;
+
+
+        public DispatchExecutor getCallbackExecutor() {
+            if (callbackExecutor == null) {
+                callbackExecutor = new DispatchExecutorImpl(Executors.newSingleThreadExecutor(), connectionTimeout);
+            }
+            return callbackExecutor;
+        }
+
+        public DispatchExecutor getConnectionExecutor() {
+            if (connectionExecutor == null) {
+                connectionExecutor = new DispatchExecutorImpl(Executors.newSingleThreadExecutor(), connectionTimeout);
+            }
+            return connectionExecutor;
+        }
+
+        public Builder callbackExecutor(final DispatchExecutor callbackExecutor) {
+            this.callbackExecutor = callbackExecutor;
+            return this;
+        }
+
+        public Builder connectionExecutor(final DispatchExecutor connectionExecutor) {
+            this.connectionExecutor = connectionExecutor;
+            return this;
+        }
 
         /**
          * Constructs a new Builder with the default values.
@@ -1471,7 +1507,12 @@ public class Options {
          * @param executor The ExecutorService to use for connections built with these options.
          * @return the Builder for chaining
          */
-        public Builder executor(ExecutorService executor) {
+        public Builder executor(final ExecutorService executor) {
+            this.executor = new DispatchExecutorImpl(executor, null);
+            return this;
+        }
+
+        public Builder executor(final DispatchExecutor executor) {
             this.executor = executor;
             return this;
         }
@@ -1583,10 +1624,11 @@ public class Options {
 
             if (this.executor == null) {
                 String threadPrefix = (this.connectionName != null && this.connectionName.length() > 0) ? this.connectionName : DEFAULT_THREAD_NAME_PREFIX;
-                this.executor = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
-                                                        500L, TimeUnit.MILLISECONDS,
-                                                        new SynchronousQueue<>(),
-                                                        new DefaultThreadFactory(threadPrefix));
+                ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+                        500L, TimeUnit.MILLISECONDS,
+                        new SynchronousQueue<>(),
+                        new DefaultThreadFactory(threadPrefix));
+                this.executor(threadPoolExecutor);
             }
             return new Options(this);
         }
@@ -1631,6 +1673,9 @@ public class Options {
         this.authHandler = b.authHandler;
         this.reconnectDelayHandler = b.reconnectDelayHandler;
 
+        this.callbackExecutor = b.getCallbackExecutor();
+        this.connectionExecutor = b.getConnectionExecutor();
+
         this.errorListener = b.errorListener == null ? new ErrorListenerLoggerImpl() : b.errorListener;
         this.connectionListener = b.connectionListener;
         this.dataPortType = b.dataPortType;
@@ -1653,7 +1698,7 @@ public class Options {
     /**
      * @return the executor, see {@link Builder#executor(ExecutorService) executor()} in the builder doc
      */
-    public ExecutorService getExecutor() {
+    public DispatchExecutor getExecutor() {
         return this.executor;
     }
 

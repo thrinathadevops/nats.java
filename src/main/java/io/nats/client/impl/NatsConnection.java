@@ -93,10 +93,10 @@ class NatsConnection implements Connection {
     private final AtomicReference<CompletableFuture<Boolean>> draining;
     private final AtomicBoolean blockPublishForDrain;
 
-    private final ExecutorService callbackRunner;
+    private final DispatchExecutor callbackRunner;
 
-    private final ExecutorService executor;
-    private final ExecutorService connectExecutor;
+    private final DispatchExecutor executor;
+    private final DispatchExecutor connectExecutor;
     private final boolean advancedTracking;
 
     NatsConnection(Options options) {
@@ -136,9 +136,9 @@ class NatsConnection implements Connection {
         this.blockPublishForDrain = new AtomicBoolean();
 
         timeTrace(trace, "creating executors");
-        this.callbackRunner = Executors.newSingleThreadExecutor();
+        this.callbackRunner = options.getCallbackExecutor();
         this.executor = options.getExecutor();
-        this.connectExecutor = Executors.newSingleThreadExecutor();
+        this.connectExecutor = options.getConnectionExecutor();
 
         timeTrace(trace, "creating reader and writer");
         this.reader = new NatsConnectionReaderImpl(this);
@@ -662,15 +662,10 @@ class NatsConnection implements Connection {
         }
 
         // Stop the error handling and connect executors
-        callbackRunner.shutdown();
-        try {
-            callbackRunner.awaitTermination(this.options.getConnectionTimeout().toNanos(), TimeUnit.NANOSECONDS);
-        } finally {
-            callbackRunner.shutdownNow();
-        }
+        callbackRunner.close();
 
         // There's no need to wait for running tasks since we're told to close
-        connectExecutor.shutdownNow();
+        connectExecutor.close();
 
         statusLock.lock();
         try {
@@ -1647,7 +1642,7 @@ class NatsConnection implements Connection {
         return this.lastError.get();
     }
 
-    ExecutorService getExecutor() {
+    public DispatchExecutor getExecutor() {
         return executor;
     }
 

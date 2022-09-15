@@ -143,7 +143,7 @@ class NatsConnectionReaderImpl implements Runnable, NatsConnectionReader {
         dataPort = this.dataPortFuture.get(); // Will wait for the future to complete
 
         if (!dataPort.supportsPush()) {
-            this.stopped = connection.getExecutor().submit(this, Boolean.TRUE);
+            this.stopped = connection.getExecutor().submit(this);
         }
         this.mode = Mode.GATHER_OP;
         this.gotCR = false;
