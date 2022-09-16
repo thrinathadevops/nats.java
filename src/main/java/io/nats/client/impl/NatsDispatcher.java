@@ -107,7 +107,7 @@ class NatsDispatcher extends NatsConsumer implements Dispatcher, Runnable {
         try {
             final NatsMessage natsMessage = getNatsMessage(Duration.ofMillis(1));
             if (natsMessage == null) {
-                return breakRunLoop();
+                return !breakRunLoop();
             }
             processMessage(natsMessage);
             return true;

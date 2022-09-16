@@ -43,9 +43,12 @@ public class ProtoTLS {
                 System.out.println("D Message " + new String(message.getData(), StandardCharsets.UTF_8));
             });
             dispatcher.subscribe("foo");
+
+            Thread.sleep(1000);
             for (int i = 0; i < 10; i++) {
                 connect2.publish("foo", ("bar " + i).getBytes(StandardCharsets.UTF_8));
             }
+            Thread.sleep(1000);
 
             Message message = subscription.nextMessage(Duration.ofSeconds(30));
             while (message!=null) {
