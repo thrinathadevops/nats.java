@@ -726,8 +726,12 @@ class NatsConnection implements Connection {
         Future<Boolean> b;
         while ((b = pongQueue.poll()) != null) {
             try {
+                System.out.println("ABOUT TO CANCEL");
                 b.cancel(true);
+                System.out.println("AFTER CANCEL");
             } catch (CancellationException e) {
+                System.out.println("UNABLE TO CANCEL");
+                e.printStackTrace();
                 if (!b.isDone() && !b.isCancelled()) {
                     processException(e);
                 }
@@ -1479,6 +1483,8 @@ class NatsConnection implements Connection {
     }
 
     void processConnectionEvent(Events type) {
+
+        System.out.println("processConnectionEvent " + type);
         ConnectionListener handler = this.options.getConnectionListener();
 
         if (handler != null && !this.callbackRunner.isShutdown()) {

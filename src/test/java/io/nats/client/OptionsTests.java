@@ -15,6 +15,7 @@ package io.nats.client;
 
 import io.nats.client.ConnectionListener.Events;
 import io.nats.client.impl.DataPort;
+import io.nats.client.impl.DispatchExecutorImpl;
 import io.nats.client.impl.ErrorListenerLoggerImpl;
 import io.nats.client.utils.CloseOnUpgradeAttempt;
 import io.nats.client.utils.CoverageServerListProvider;
@@ -595,10 +596,11 @@ public class OptionsTests {
     }
     
     @Test
-    public void testSetExectuor() {
+    public void testSetExecutor() {
         ExecutorService exec = Executors.newCachedThreadPool();
         Options options = new Options.Builder().executor(exec).build();
-        assertEquals(exec, options.getExecutor());
+        assertNotNull(options.getExecutor());
+        assertTrue(options.getExecutor() instanceof DispatchExecutorImpl);
     }
     
     @Test

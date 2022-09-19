@@ -4,6 +4,7 @@ import io.nats.client.Dispatcher;
 import io.nats.client.Options;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.*;
@@ -88,12 +89,36 @@ public class VertxDataPort implements DataPort {
             final NetSocket netSocket = event.result();
             this.socket.set(netSocket);
 
+            netSocket.endHandler(event1 -> {
+
+                if (connection.isConnected()) {
+                    try {
+                        connection.closeSocket(true);
+                    } catch (InterruptedException e) {
+                        connection.handleCommunicationIssue(e);
+                    }
+                }
+            });
+
+            netSocket.closeHandler(event12 -> {
+                    if (reader!=null) {
+                        while (inputQueue.size() > 0) {
+                            try {
+                                reader.readNow();
+                            } catch (IOException e) {
+                                connection.handleCommunicationIssue(e);
+                            }
+                        }
+                    }
+
+            });
+
             netSocket.handler(buffer -> {
                 try {
                     inputQueue.put(buffer);
                     if (reader != null) reader.readNow();
                 } catch (IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
+                    connection.handleCommunicationIssue(e);
                 }
             });
         }

@@ -172,7 +172,8 @@ public class Options {
      * <p><em>This option is currently provided only for testing, and experimentation, the default 
      * should be used in almost all cases.</em>
      */
-    public static final String DEFAULT_DATA_PORT_TYPE = SocketDataPort.class.getCanonicalName();
+    public static final String DEFAULT_DATA_PORT_TYPE =  SocketDataPort.class.getCanonicalName();
+        //SocketDataPort.class.getCanonicalName();
 
     /**
      * Default size for buffers in the connection, not as available as other settings, 
@@ -674,7 +675,7 @@ public class Options {
 
         public DispatchExecutor getConnectionExecutor() {
             if (connectionExecutor == null) {
-                connectionExecutor = new DispatchExecutorImpl(Executors.newSingleThreadExecutor(), connectionTimeout);
+                connectionExecutor = new DispatchExecutorImpl(Executors.newFixedThreadPool(10), connectionTimeout);
             }
             return connectionExecutor;
         }
@@ -1194,12 +1195,11 @@ public class Options {
 
         /**
          * Set the SSL context to one that accepts any server certificate and has no client certificates.
-         * 
-         * @throws NoSuchAlgorithmException If the tls protocol is unavailable.
+         *
          * @return the Builder for chaining
          */
-        public Builder opentls() throws NoSuchAlgorithmException {
-            this.sslContext = SSLUtils.createOpenTLSContext();
+        public Builder opentls()  {
+            openTls = true;
             return this;
         }
 
@@ -1599,24 +1599,35 @@ public class Options {
             if (serverURIs.size() == 0) {
                 server(DEFAULT_URL);
             }
-            else if (sslContext == null) {
+
+            if (sslContext == null) {
 
                 if (tls && tlsTruststorePath!= null || tlsKeystorePath != null) {
                     final TrustManager[] trustManagers = TlsUtils.createTrustManagers(tlsTruststorePath, tlsTruststorePassword, null, tlsTruststoreAlgorithm);
                     final KeyManager[] keyManagers = TlsUtils.createKeyManagers(tlsKeystorePath, tlsKeystorePassword, null, tlsKeystoreAlgorithm);
                     this.sslContext = TlsUtils.createSSLContext(TlsUtils.DEFAULT_SSL_PROTOCOL, trustManagers, keyManagers);
                 } else {
-                    for (URI serverURI : serverURIs) {
-                        if (TLS_PROTOCOL.equals(serverURI.getScheme())) {
-                            try {
-                                this.sslContext = SSLContext.getDefault();
-                            } catch (NoSuchAlgorithmException e) {
-                                throw new IllegalStateException("Unable to create default SSL context", e);
+                    if (openTls) {
+                        this.sslContext = SSLUtils.createOpenTLSContext();
+                    } else if (tls) {
+                        try {
+                            this.sslContext = SSLContext.getDefault();
+                        } catch (NoSuchAlgorithmException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        for (URI serverURI : serverURIs) {
+                            if (TLS_PROTOCOL.equals(serverURI.getScheme())) {
+                                try {
+                                    this.sslContext = SSLContext.getDefault();
+                                } catch (NoSuchAlgorithmException e) {
+                                    throw new IllegalStateException("Unable to create default SSL context", e);
+                                }
+                                break;
+                            } else if (OPENTLS_PROTOCOL.equals(serverURI.getScheme())) {
+                                this.sslContext = SSLUtils.createOpenTLSContext();
+                                break;
                             }
-                            break;
-                        } else if (OPENTLS_PROTOCOL.equals(serverURI.getScheme())) {
-                            this.sslContext = SSLUtils.createOpenTLSContext();
-                            break;
                         }
                     }
                 }

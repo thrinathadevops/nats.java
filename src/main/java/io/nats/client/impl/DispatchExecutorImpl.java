@@ -26,7 +26,19 @@ public class DispatchExecutorImpl implements DispatchExecutor {
 
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-        return executorService.submit(task);
+        final Callable<T> callback = new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                T result = null;
+                try {
+                    result = task.call();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                return result;
+            }
+        };
+        return executorService.submit(callback);
     }
 
     @Override

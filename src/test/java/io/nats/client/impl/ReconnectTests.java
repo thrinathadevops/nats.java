@@ -69,8 +69,8 @@ public class ReconnectTests {
             Message msg = inc.get();
             assertNotNull(msg);
 
-            nc.publish("subsubject", null);
-            msg = sub.nextMessage(Duration.ofMillis(100));
+            nc.publish("subsubject", "".getBytes(StandardCharsets.UTF_8));
+            msg = sub.nextMessage(Duration.ofMillis(1000));
             assertNotNull(msg);
 
             handler.prepForStatusChange(Events.DISCONNECTED);
