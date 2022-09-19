@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import static io.nats.client.support.Encoding.uriDecode;
 import static io.nats.client.support.NatsConstants.*;
@@ -173,7 +174,7 @@ public class Options {
      * should be used in almost all cases.</em>
      */
     public static final String DEFAULT_DATA_PORT_TYPE =  SocketDataPort.class.getCanonicalName();
-        //SocketDataPort.class.getCanonicalName();
+        //SocketDataPort.class.getCanonicalName(); VertxDataPort
 
     /**
      * Default size for buffers in the connection, not as available as other settings, 
@@ -558,19 +559,19 @@ public class Options {
     private final boolean trackAdvancedStats;
     private final boolean traceConnection;
 
-    private final DispatchExecutor executor;
+    private final Supplier<DispatchExecutor> executor;
     private final ServerListProvider serverListProvider;
 
 
-    private final DispatchExecutor callbackExecutor;
-    private final DispatchExecutor connectionExecutor;
+    private final Supplier<DispatchExecutor> callbackExecutor;
+    private final Supplier<DispatchExecutor> connectionExecutor;
 
     public DispatchExecutor getCallbackExecutor() {
-        return callbackExecutor;
+        return callbackExecutor.get();
     }
 
     public DispatchExecutor getConnectionExecutor() {
-        return connectionExecutor;
+        return connectionExecutor.get();
     }
 
     static class DefaultThreadFactory implements ThreadFactory {
@@ -660,32 +661,36 @@ public class Options {
         private ErrorListener errorListener = null;
         private ConnectionListener connectionListener = null;
         private String dataPortType = DEFAULT_DATA_PORT_TYPE;
-        private DispatchExecutor executor;
+        private Supplier<DispatchExecutor> executor;
         private SSLContext sslContext;
-        private DispatchExecutor callbackExecutor;
-        private DispatchExecutor connectionExecutor;
+        private Supplier<DispatchExecutor> callbackExecutor;
+        private Supplier<DispatchExecutor> connectionExecutor;
 
 
-        public DispatchExecutor getCallbackExecutor() {
+        public Supplier<DispatchExecutor> getCallbackExecutor() {
             if (callbackExecutor == null) {
-                callbackExecutor = new DispatchExecutorImpl(Executors.newSingleThreadExecutor(), connectionTimeout);
+                callbackExecutor = () -> new DispatchExecutorImpl(Executors.newSingleThreadExecutor(), null);
             }
             return callbackExecutor;
         }
 
-        public DispatchExecutor getConnectionExecutor() {
+        public Supplier<DispatchExecutor> getConnectionExecutor() {
             if (connectionExecutor == null) {
-                connectionExecutor = new DispatchExecutorImpl(Executors.newFixedThreadPool(10), connectionTimeout);
+                connectionExecutor = () -> new DispatchExecutorImpl(Executors.newSingleThreadExecutor(), reconnectWait);
             }
             return connectionExecutor;
         }
 
-        public Builder callbackExecutor(final DispatchExecutor callbackExecutor) {
+        public Builder executor(final Supplier<DispatchExecutor> executor) {
+            this.executor = executor;
+            return this;
+        }
+        public Builder callbackExecutor(final Supplier<DispatchExecutor> callbackExecutor) {
             this.callbackExecutor = callbackExecutor;
             return this;
         }
 
-        public Builder connectionExecutor(final DispatchExecutor connectionExecutor) {
+        public Builder connectionExecutor(final Supplier<DispatchExecutor> connectionExecutor) {
             this.connectionExecutor = connectionExecutor;
             return this;
         }
@@ -1508,14 +1513,10 @@ public class Options {
          * @return the Builder for chaining
          */
         public Builder executor(final ExecutorService executor) {
-            this.executor = new DispatchExecutorImpl(executor, null);
+            this.executor = () -> new DispatchExecutorImpl(executor, null);
             return this;
         }
 
-        public Builder executor(final DispatchExecutor executor) {
-            this.executor = executor;
-            return this;
-        }
 
         /**
          * The class to use for this connections data port. This is an advanced setting
@@ -1639,7 +1640,7 @@ public class Options {
                         500L, TimeUnit.MILLISECONDS,
                         new SynchronousQueue<>(),
                         new DefaultThreadFactory(threadPrefix));
-                this.executor(threadPoolExecutor);
+                this.executor(() -> new DispatchExecutorImpl(threadPoolExecutor, null));
             }
             return new Options(this);
         }
@@ -1710,7 +1711,7 @@ public class Options {
      * @return the executor, see {@link Builder#executor(ExecutorService) executor()} in the builder doc
      */
     public DispatchExecutor getExecutor() {
-        return this.executor;
+        return this.executor.get();
     }
 
     /**

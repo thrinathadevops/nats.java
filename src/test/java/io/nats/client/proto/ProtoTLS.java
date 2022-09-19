@@ -20,9 +20,9 @@ public class ProtoTLS {
 
             final Vertx vertx = Vertx.vertx();
             VertxDataPort.setVertx(vertx);
-            builder.executor(new VertxDispatchExecutorImpl(vertx));
-            builder.callbackExecutor(new VertxDispatchExecutorImpl(vertx));
-            builder.connectionExecutor(new VertxDispatchExecutorImpl(vertx));
+            builder.executor(()->new VertxDispatchExecutorImpl(vertx));
+            builder.callbackExecutor(()->new VertxDispatchExecutorImpl(vertx));
+            builder.connectionExecutor(()->new VertxDispatchExecutorImpl(vertx));
             builder.dataPortType(VertxDataPort.class.getCanonicalName());
             builder.connectionTimeout(Duration.ofSeconds(30));
             builder.tlsAlgorithm("SunX509");

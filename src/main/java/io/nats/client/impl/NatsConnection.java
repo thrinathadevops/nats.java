@@ -99,7 +99,7 @@ class NatsConnection implements Connection {
     private final DispatchExecutor connectExecutor;
     private final boolean advancedTracking;
 
-    NatsConnection(Options options) {
+    NatsConnection(final Options options) {
         boolean trace = options.isTraceConnection();
         timeTrace(trace, "creating connection object");
 
