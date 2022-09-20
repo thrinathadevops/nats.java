@@ -418,13 +418,21 @@ class NatsConnection implements Connection {
                 }
             };
 
+            final long start = System.currentTimeMillis();
+
             timeoutNanos = timeCheck(trace, end, "reading info, version and upgrading to secure if necessary");
             Future<Object> future = this.connectExecutor.submit(connectTask);
             try {
                 future.get(timeoutNanos, TimeUnit.NANOSECONDS);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                final long endTime = System.currentTimeMillis();
+                System.out.println("Exception END " + (endTime - start));
+                return;
             } finally {
                 future.cancel(true);
             }
+
 
             // start the reader and writer after we secured the connection, if necessary
             timeCheck(trace, end, "starting reader");
@@ -432,8 +440,20 @@ class NatsConnection implements Connection {
             timeCheck(trace, end, "starting writer");
             this.writer.start(this.dataPortFuture);
 
+
+
+
+
             timeCheck(trace, end, "sending connect message");
             this.sendConnect(serverURI);
+
+
+//            Thread.sleep(100);
+//            final long endTime = System.currentTimeMillis();
+//            if (this.lastError!=null) {
+//                return;
+//            }
+
 
             timeoutNanos = timeCheck(trace, end, "sending initial ping");
             Future<Boolean> pongFuture = sendPing();
@@ -490,6 +510,7 @@ class NatsConnection implements Connection {
             processException(exp);
             throw exp;
         } catch (Exception exp) { // every thing else
+            exp.printStackTrace();
             processException(exp);
             try {
                 this.closeSocket(false);

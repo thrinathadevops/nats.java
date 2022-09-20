@@ -45,7 +45,7 @@ public class VertxDataPort implements DataPort {
     }
 
 
-    final static ThreadLocal<Vertx> vertxThreadLocal = new ThreadLocal<>();
+    final static AtomicReference<Vertx> vertxThreadLocal = new AtomicReference<>();
 
     public static void setVertx(final Vertx vertx) {
         vertxThreadLocal.set(vertx);
@@ -130,6 +130,11 @@ public class VertxDataPort implements DataPort {
             return;
         }
         connection.dispatchers.values().stream().map(m -> (Dispatcher) m).forEach(d -> {
+                    for (int i =0; i < 10; i++) {
+                        if (!d.processNextMessage()) {
+                            break;
+                        }
+                    }
                     if (!d.processNextMessage()) {
                         connection.dispatchers.remove(d.getId());
                     }
@@ -214,7 +219,7 @@ public class VertxDataPort implements DataPort {
     @Override
     public int read(byte[] dst, int off, int len) throws IOException {
         try {
-            final Buffer buffer = inputQueue.poll(30, TimeUnit.SECONDS);
+            final Buffer buffer = inputQueue.poll(1, TimeUnit.SECONDS);
             if (buffer == null) {
                 return -1;
             }

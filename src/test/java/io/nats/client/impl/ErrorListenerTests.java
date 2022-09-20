@@ -16,6 +16,7 @@ package io.nats.client.impl;
 import io.nats.client.*;
 import io.nats.client.ConnectionListener.Events;
 import io.nats.client.support.Status;
+import io.vertx.core.Vertx;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -34,6 +35,8 @@ public class ErrorListenerTests {
 
     @Test
     public void testLastError() throws Exception {
+
+
         NatsConnection nc = null;
         TestHandler handler = new TestHandler();
         String[] customArgs = {"--user", "stephen", "--pass", "password"};
@@ -41,14 +44,21 @@ public class ErrorListenerTests {
         try (NatsTestServer ts = new NatsTestServer();
              NatsTestServer ts2 = new NatsTestServer(customArgs, false); //ts2 requires auth
              NatsTestServer ts3 = new NatsTestServer()) {
-            Options options = new Options.Builder().
+            Options.Builder builder = new Options.Builder().
                     server(ts.getURI()).
                     server(ts2.getURI()).
                     server(ts3.getURI()).
                     noRandomize().
                     connectionListener(handler).
-                    maxReconnects(-1).
-                    build();
+                    maxReconnects(-1);
+
+            final Vertx vertx = Vertx.vertx();
+            VertxDataPort.setVertx(vertx);
+            builder.executor(()->new VertxDispatchExecutorImpl(vertx));
+            builder.callbackExecutor(()->new VertxDispatchExecutorImpl(vertx));
+            builder.connectionExecutor(()->new VertxDispatchExecutorImpl(vertx));
+
+            Options options = builder.build();
             nc = (NatsConnection) Nats.connect(options);
             assertSame(Connection.Status.CONNECTED, nc.getStatus(), "Connected Status");
             assertEquals(ts.getURI(), nc.getConnectedUrl());
@@ -69,6 +79,7 @@ public class ErrorListenerTests {
             handler.waitForStatusChange(5, TimeUnit.SECONDS);
 
             assertNotNull(nc.getLastError());
+            System.out.println(nc.getLastError());
             assertTrue(nc.getLastError().contains("Authorization Violation"));
             assertSame(Connection.Status.CONNECTED, nc.getStatus(), "Connected Status");
             assertEquals(ts3.getURI(), nc.getConnectedUrl());

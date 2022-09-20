@@ -20,11 +20,12 @@ public class ProtoTLS {
 
             final Vertx vertx = Vertx.vertx();
             VertxDataPort.setVertx(vertx);
-            builder.executor(()->new VertxDispatchExecutorImpl(vertx));
+            builder.executor(()-> new VertxDispatchExecutorImpl(vertx));
             builder.callbackExecutor(()->new VertxDispatchExecutorImpl(vertx));
             builder.connectionExecutor(()->new VertxDispatchExecutorImpl(vertx));
             builder.dataPortType(VertxDataPort.class.getCanonicalName());
             builder.connectionTimeout(Duration.ofSeconds(30));
+            builder.userInfo("usr".toCharArray(), "pwd".toCharArray());
             builder.tlsAlgorithm("SunX509");
             builder.tlsKeystorePassword("password".toCharArray());
             builder.tlsTruststorePassword("password".toCharArray());
@@ -35,6 +36,11 @@ public class ProtoTLS {
             //builder.sslContext(SSLContext.getDefault());
             builder.secure();
             final Connection connect1 = Nats.connect(builder.build());
+
+            System.out.println(connect1.getLastError());
+
+
+
             final Connection connect3 = Nats.connect(builder.build());
             final Connection connect2 = Nats.connect(builder.build());
             final Subscription subscription = connect1.subscribe("foo");
