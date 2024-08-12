@@ -298,6 +298,10 @@ public abstract class Nats {
         t.start();
     }
 
+    public static Connection connectAsynchronouslyWithHandle(Options options, boolean reconnectOnConnect) {
+        return NatsImpl.createConnectionAndConnectInThread(options, reconnectOnConnect);
+    }
+
     /**
      * Create an auth handler from a creds file. The handler will read the file each time it needs to respond to a request
      * and clear the memory after. This has a small price, but will only be encountered during connect or reconnect.

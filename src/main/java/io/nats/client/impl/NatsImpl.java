@@ -30,6 +30,20 @@ public class NatsImpl {
         return conn;
     }
 
+    public static Connection createConnectionAndConnectInThread(Options options, boolean reconnectOnConnect) {
+        NatsConnection conn = new NatsConnection(options);
+        Thread t = new Thread(() -> {
+            try {
+                conn.connect(reconnectOnConnect);
+            } catch (Exception ex) {
+                options.getErrorListener().exceptionOccurred(null, ex);
+            }
+        });
+        t.setName("NATS - async connection");
+        t.start();
+        return conn;
+    }
+
     public static Statistics createEmptyStats() {
         return new NatsStatistics();
     }
