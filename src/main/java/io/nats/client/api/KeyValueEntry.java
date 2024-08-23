@@ -15,6 +15,7 @@ package io.nats.client.api;
 import io.nats.client.Message;
 import io.nats.client.impl.Headers;
 import io.nats.client.support.NatsKeyValueUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
@@ -93,7 +94,7 @@ public class KeyValueEntry {
         return delta;
     }
 
-    public KeyValueOperation getOperation() {
+    public @NotNull KeyValueOperation getOperation() {
         return op;
     }
 

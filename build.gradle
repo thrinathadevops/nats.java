@@ -37,6 +37,7 @@ repositories {
 
 dependencies {
     implementation 'net.i2p.crypto:eddsa:0.3.0'
+    compileOnly 'org.jetbrains:annotations:24.1.0'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     testImplementation 'io.nats:jnats-server-runner:2.0.0'
@@ -98,7 +99,6 @@ javadoc {
                 "io/nats/client/api/ConsumerCreateRequest.java",
                 "io/nats/client/api/MessageGetRequest.java"
     ]
-    classpath = sourceSets.main.runtimeClasspath
     doLast {
         if (!OperatingSystem.current().isWindows()) {
             exec {
