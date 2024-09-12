@@ -46,4 +46,4 @@ jobs:
       - name: Verify Javadoc
         run: ./gradlew javadoc
       - name: Publish Snapshot
-        run: ./gradlew -i publishToSonatype
+        run: ./gradlew 
